@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
+import "WheelChair-tiktok/config"
 
 func main() {
-	fmt.Println("测试")
+	config.LoadEnv()
+
+	fmt.Println(os.Getenv("MYSQL_DSN"))
 }
