@@ -69,7 +69,7 @@ func LogUp(name string, password string) bool {
 			if err != nil {
 				log.Fatal("Hash error\n")
 			}
-			user.Password = string(hash)
+			user = User{Password: string(hash), UserName: name}
 			DB.Create(&user)
 			return true
 		} else {
