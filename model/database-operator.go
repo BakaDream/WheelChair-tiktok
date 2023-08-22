@@ -1,6 +1,7 @@
 package model
 
 import (
+	"WheelChair-tiktok/global"
 	"database/sql"
 	"errors"
 	mysqlDriver "github.com/go-sql-driver/mysql"
@@ -8,22 +9,19 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
-	"os"
 )
 
-var DSN = os.Getenv("MYSQL_DSN")
 var TABLES = []interface{}{
 	&Video{}, &Comment{}, &User{}, &UserVideoLike{}, &UserFollow{},
 }
-var DB *gorm.DB
 
 func databaseCreate() {
-	db, err := sql.Open("mysql", DSN)
+	db, err := sql.Open("mysql", global.DSN)
 	if err != nil {
 		log.Fatal("Failed to connect database\n")
 	}
 	defer db.Close()
-	config, err := mysqlDriver.ParseDSN(DSN) //解析
+	config, err := mysqlDriver.ParseDSN(global.DSN) //解析
 	if err != nil {
 		log.Fatal("Failed to parse DSN:", err)
 		return
@@ -38,7 +36,7 @@ func databaseCreate() {
 } //创建新的数据库
 
 func databseInit() {
-	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(global.DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to init database\n")
 	}
@@ -51,17 +49,17 @@ func databseInit() {
 func DatabaseConn() {
 	databaseCreate()
 	databseInit()
-	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(global.DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect database\n")
 	}
 	log.Println("MySQL database connect successfully")
-	DB = db
+	global.DB = db
 }
 
 func LogUp(name string, password string) bool {
 	var user User
-	result := DB.Where("UserName = ?", name).Find(&user)
+	result := global.DB.Where("UserName = ?", name).Find(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// 没有找到记录
@@ -70,7 +68,7 @@ func LogUp(name string, password string) bool {
 				log.Fatal("Hash error\n")
 			}
 			user = User{Password: string(hash), UserName: name}
-			DB.Create(&user)
+			global.DB.Create(&user)
 			return true
 		} else {
 			// 查询过程中发生了其他错误
@@ -84,7 +82,7 @@ func LogUp(name string, password string) bool {
 
 func LogIn(name string, password string) bool {
 	var user User
-	result := DB.Where("UserName = ? AND Password = ?", name).Find(&user)
+	result := global.DB.Where("UserName = ? AND Password = ?", name).Find(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// 没有找到记录
