@@ -2,8 +2,9 @@ package model
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
 	mysqlDriver "github.com/go-sql-driver/mysql"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
@@ -19,27 +20,27 @@ var DB *gorm.DB
 func databaseCreate() {
 	db, err := sql.Open("mysql", DSN)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to connect database\n")
 	}
 	defer db.Close()
 	config, err := mysqlDriver.ParseDSN(DSN) //解析
 	if err != nil {
-		fmt.Println("Failed to parse DSN:", err)
+		log.Fatal("Failed to parse DSN:", err)
 		return
 	}
 	// 提取数据库名称
 	dbName := config.DBName
 	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + dbName)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to create database\n")
 	}
-	log.Println("MySQL database created successfully")
+	log.Println("MySQL database create successfully")
 } //创建新的数据库
 
 func databseInit() {
 	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to init database\n")
 	}
 	for _, table := range TABLES {
 		db.AutoMigrate(table)
@@ -52,7 +53,55 @@ func DatabaseConn() {
 	databseInit()
 	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Failed to connect database\n")
 	}
+	log.Println("MySQL database connect successfully")
 	DB = db
+}
+
+func LogUp(name string, password string) bool {
+	var user User
+	result := DB.Where("UserName = ?", name).Find(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// 没有找到记录
+			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if err != nil {
+				log.Fatal("Hash error\n")
+			}
+			user.Password = string(hash)
+			DB.Create(&user)
+			return true
+		} else {
+			// 查询过程中发生了其他错误
+			log.Fatal("Unknown error")
+		}
+	} else {
+		log.Println("The user already exists")
+	}
+	return false
+}
+
+func LogIn(name string, password string) bool {
+	var user User
+	result := DB.Where("UserName = ? AND Password = ?", name).Find(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// 没有找到记录
+			log.Println("The username or password is incorrect")
+			return false
+		} else {
+			// 查询过程中发生了其他错误
+			log.Fatal("Unknown error\n")
+		}
+	} else {
+		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal("Hash error\n")
+		}
+		if string(hash) == user.Password {
+			log.Println("Login successful")
+		}
+	}
+	return true
 }
