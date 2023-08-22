@@ -10,20 +10,19 @@ import (
 	"os"
 )
 
-var dsn = os.Getenv("MYSQL_DSN")
-var tables = []interface{}{
-	&Response{}, &Video{}, &Comment{}, &User{},
-	&Message{}, &MessageSendEvent{}, &MessagePushEvent{},
+var DSN = os.Getenv("MYSQL_DSN")
+var TABLES = []interface{}{
+	&Video{}, &Comment{}, &User{}, &UserVideoLike{}, &UserFollow{},
 }
-var db *gorm.DB
+var DB *gorm.DB
 
 func databaseCreate() {
-	db, err := sql.Open("mysql", dsn)
+	db, err := sql.Open("mysql", DSN)
 	if err != nil {
 		log.Fatal(err)
 	}
-	db.Close()
-	config, err := mysqlDriver.ParseDSN(dsn) //解析
+	defer db.Close()
+	config, err := mysqlDriver.ParseDSN(DSN) //解析
 	if err != nil {
 		fmt.Println("Failed to parse DSN:", err)
 		return
@@ -38,20 +37,22 @@ func databaseCreate() {
 } //创建新的数据库
 
 func databseInit() {
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, table := range tables {
+	for _, table := range TABLES {
 		db.AutoMigrate(table)
 	}
 	log.Println("MySQL database init successfully")
 } //数据库初始化
 
-func databaseConn() {
-	var err error
-	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func DatabaseConn() {
+	databaseCreate()
+	databseInit()
+	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
+	DB = db
 }
