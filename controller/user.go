@@ -36,7 +36,7 @@ func Register(c *gin.Context) {
 		return
 	}
 	//返回 UserRegisterResponse
-	//token
+	//生成token
 	//c.JSON(http.StatusOK, UserLoginResponse{
 	//	Response: model.Response{StatusCode: 0},
 	//	UserId:   user.ID,
@@ -69,7 +69,7 @@ func Login(c *gin.Context) {
 		}
 	}
 	//返回 UserRegisterResponse
-	//token
+	//生成token
 	//c.JSON(http.StatusOK, UserLoginResponse{
 	//	Response: model.Response{StatusCode: 0},
 	//	UserId:   user.ID,
