@@ -3,16 +3,14 @@ package model
 import (
 	"WheelChair-tiktok/global"
 	"database/sql"
-	"errors"
 	mysqlDriver "github.com/go-sql-driver/mysql"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
 )
 
 var TABLES = []interface{}{
-	&Video{}, &Comment{}, &User{}, &UserVideoLike{}, &UserFollow{},
+	&Video{}, &Comment{}, &User{}, &UserVideoLike{}, //&UserFollow,
 }
 
 func databaseCreate() {
@@ -55,51 +53,4 @@ func DatabaseConn() {
 	}
 	log.Println("MySQL database connect successfully")
 	global.DB = db
-}
-
-func LogUp(name string, password string) bool {
-	var user User
-	result := global.DB.Where("UserName = ?", name).Find(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// 没有找到记录
-			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-			if err != nil {
-				log.Fatal("Hash error\n")
-			}
-			user = User{Password: string(hash), UserName: name}
-			global.DB.Create(&user)
-			return true
-		} else {
-			// 查询过程中发生了其他错误
-			log.Fatal("Unknown error")
-		}
-	} else {
-		log.Println("The user already exists")
-	}
-	return false
-}
-
-func LogIn(name string, password string) bool {
-	var user User
-	result := global.DB.Where("UserName = ? AND Password = ?", name).Find(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// 没有找到记录
-			log.Println("The username or password is incorrect")
-			return false
-		} else {
-			// 查询过程中发生了其他错误
-			log.Fatal("Unknown error\n")
-		}
-	} else {
-		hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-		if err != nil {
-			log.Fatal("Hash error\n")
-		}
-		if string(hash) == user.Password {
-			log.Println("Login successful")
-		}
-	}
-	return true
 }
