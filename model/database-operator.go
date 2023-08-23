@@ -44,9 +44,11 @@ func databseInit() {
 	log.Println("MySQL database init successfully")
 } //数据库初始化
 
-func DatabaseConn() {
+func DatabaseConn(initialize bool) {
 	databaseCreate()
-	databseInit()
+	if initialize == true {
+		databseInit()
+	}
 	db, err := gorm.Open(mysql.Open(global.DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect database\n")
