@@ -9,3 +9,5 @@ import (
 var Logger *zap.Logger
 var DSN = os.Getenv("MYSQL_DSN")
 var DB *gorm.DB
+
+const MaxPerPage = 15
