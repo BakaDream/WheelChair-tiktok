@@ -1,10 +1,8 @@
 package storage
 
 import (
-	"WheelChair-tiktok/global"
 	"context"
 	"github.com/tencentyun/cos-go-sdk-v5"
-	"go.uber.org/zap"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -16,18 +14,19 @@ type TencentCos struct {
 	SecretKey string
 }
 
-// UploadFile 腾讯云cos上传，传入文件对象 返回云端路径
+// UploadFile 腾讯云cos上传，传入文件对象 返回视频云端路径 和封面路径
 func (c *TencentCos) UploadFile(file *multipart.FileHeader) (string, error) {
 	client := c.newClient()
 	f, err := file.Open()
 	if err != nil {
-		global.Logger.Error("Fail", zap.Error(err))
+		//
 		return "", err
 	}
 	defer f.Close()
-	_, err = client.Object.Put(context.Background(), file.Filename, f, nil)
-	ourl := client.Object.GetObjectURL(file.Filename)
-	return ourl.String(), nil
+	dst := "videos" + "/" + file.Filename
+	_, err = client.Object.Put(context.Background(), dst, f, nil)
+	videoUrl := c.CosUrl + "/" + dst
+	return videoUrl, nil
 }
 
 func (c *TencentCos) newClient() *cos.Client {

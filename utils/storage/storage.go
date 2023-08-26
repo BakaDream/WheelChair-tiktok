@@ -1,28 +1,32 @@
 package storage
 
 import (
-	"WheelChair-tiktok/global"
+	"log"
 	"mime/multipart"
 	"os"
 )
+
+var Storage Store
 
 type Store interface {
 	UploadFile(file *multipart.FileHeader) (string, error)
 }
 
-func Init() {
+func Init() Store {
 	switch os.Getenv("STORAGE_TYPE") {
 	case "TencentCOS":
-		global.Storage = &TencentCos{
-			CosUrl:    os.Getenv("Tencent_COS_URL"),
+		Storage = &TencentCos{
+			CosUrl:    os.Getenv("TENCENT_COS_URL"),
 			SecretId:  os.Getenv("Tencent_COS_SecretKey"),
 			SecretKey: os.Getenv("Tencent_COS_SecretKey"),
 		}
 	case "Local":
-		global.Storage = &Local{}
+		Storage = &Local{
+			Static: os.Getenv("LOCAL_STATIC_URL"),
+		}
 	default:
-		global.Logger.Fatal("Can't Load Storage Config, Please Check env")
+		log.Fatal("Can't Load Storage Config, Please Check env")
 
 	}
-
+	return nil
 }
