@@ -9,7 +9,8 @@ import (
 type Video struct {
 	//Id            uint      `gorm:"primaryKey" json:"id"`
 	gorm.Model
-	UserID        uint   `json:"user_id"`
+	UserID        uint   `gorm:"user_id" json:"-"`
+	User          User   `gorm:"-" json:"user"`
 	PlayUrl       string `gorm:"unique" json:"play_url"`
 	CoverUrl      string `gorm:"unique" json:"cover_url"`
 	FavoriteCount int64  `json:"favorite_count"`
@@ -21,14 +22,16 @@ type Video struct {
 type Comment struct {
 	//Id            uint      `gorm:"primaryKey" json:"id"`
 	gorm.Model
-	UserID  uint   `json:"user_id"`
+	UserID  uint   `gorm:"user_id" json:"-"`
+	VideoID uint   `json:"video_id"`
+	User    User   `gorm:"-" json:"user"`
 	Content string `gorm:"not null" json:"content"`
 }
 
 type User struct {
 	//Id              uint      `gorm:"primaryKey" json:"id"`    // 用户id
 	gorm.Model
-	UserName        string `json:"user_name"` // 用户名称
+	UserName        string `gorm:"unique" json:"user_name"` // 用户名称
 	IP              string `json:"ip"`
 	Password        string `json:"-"`
 	FollowCount     int64  `json:"follow_count"`                            // 关注总数
@@ -39,23 +42,15 @@ type User struct {
 	TotalFavorited  string `json:"total_favorited"`                         //获赞数量
 	WorkCount       int64  `json:"work_count"`                              //作品数量
 	FavoriteCount   int64  `json:"favorite_count"`                          //点赞数量
-	IsFollow        bool   `gorm:"-" json:"is_favorite"`                    //只在传递信息用到
+	//IsFollow        bool   `gorm:"-" json:"is_favorite"`                    //只在传递信息用到
 	//CreateUser      time.Time `json:"create_user"`
 }
 
-// ---------------喜欢 模型------------------
+// ---------------用户喜欢 模型------------------
 type UserVideoLike struct {
 	gorm.Model
 	UserID  uint `gorm:"user_id"`
-	VideoId uint `gorm:"video_id"`
-}
-
-// ---------------评论 模型------------------
-type UserVideoComment struct {
-	gorm.Model
-	UserID    uint `gorm:"user_id"`
-	VideoId   uint `gorm:"video_id"`
-	CommentID uint `gorm:"comment_id"`
+	VideoID uint `gorm:"video_id"`
 }
 
 // ---------------关注 模型------------------
@@ -65,7 +60,9 @@ type UserVideoComment struct {
 //		UserId1 uint `json:"user_id_1"`
 //		UserId2 uint `json:"user_id_2"`
 //	}
-//
+
+///////////////////////////////////////////////////////////////
+
 // ---------------视频流 模型------------------
 type FeedRequest struct {
 	LatestTime int64  `json:"latestTime"`
@@ -92,7 +89,7 @@ type UserRegisterRequest struct {
 type UserRegisterResponse struct {
 	StatusCode int32  `json:"statusCode"`           // 状态码，0-成功，其他值-失败
 	StatusMsg  string `json:"status_msg,omitempty"` // 返回状态描述
-	UserID     uint   `json:"user_id"`
+	User       User   `json:"user"`
 	Token      string `json:"token"`
 }
 
@@ -105,7 +102,7 @@ type UserRequest struct {
 type UserResponse struct {
 	StatusCode int32  `json:"status_code"`          // 状态码，0-成功，其他值-失败
 	StatusMsg  string `json:"status_msg,omitempty"` // 返回状态描述
-	UserID     uint   `json:"user"`
+	User       User   `json:"user"`
 }
 
 // ---------------视频发布 模型------------------
@@ -121,15 +118,15 @@ type PublishResponse struct {
 	Video      Video  `json:"video"`                //直接返回视频
 }
 
-// ---------------已发布视频 模型------------------
+// ---------------已发布视频列表 模型------------------
 type UserPublishRequest struct {
 	UserID uint   `json:"user_id"`
 	Token  string `json:"token"`
 }
 type UserPublishResponse struct {
-	StatusCode  int32  `json:"status_code"`          // 状态码，0-成功，其他值-失败
-	StatusMsg   string `json:"status_msg,omitempty"` // 返回状态描述
-	VideoListID []uint `json:"video_list_id"`
+	StatusCode int32   `json:"status_code"`          // 状态码，0-成功，其他值-失败
+	StatusMsg  string  `json:"status_msg,omitempty"` // 返回状态描述
+	VideoList  []Video `json:"video_list_id"`
 }
 
 // ---------------赞 模型------------------
@@ -150,16 +147,16 @@ type FavoriteListRequest struct {
 	Token  string `json:"token"`
 }
 type FavoriteListResponse struct {
-	StatusCode  int32  `json:"status_code"`          // 状态码，0-成功，其他值-失败
-	StatusMsg   string `json:"status_msg,omitempty"` // 返回状态描述
-	VideoListID []uint `json:"video_list_id"`
+	StatusCode int32   `json:"status_code"`          // 状态码，0-成功，其他值-失败
+	StatusMsg  string  `json:"status_msg,omitempty"` // 返回状态描述
+	VideoList  []Video `json:"video_list_id"`
 }
 
 // ---------------评论 模型------------------
 type CommentActionRequest struct {
 	VideoID     uint   `json:"video_id"`
 	ActionType  int32  `json:"action_type"` //1-发布评论，2-删除评论
-	CommentText string `json:"comment_text"`
+	CommentText string `json:"comment_text,omitempty"`
 	CommentId   int64  `json:"comment_id"`
 	Token       string `json:"token"`
 }
@@ -175,12 +172,12 @@ type CommentListRequest struct {
 	Token   string `json:"token"`
 }
 type CommentListResponse struct {
-	StatusCode    uint   `json:"status_code"`          // 状态码，0-成功，其他值-失败
-	StatusMsg     string `json:"status_msg,omitempty"` // 返回状态描述
-	CommentListID []uint `json:"comment_list_id"`
+	StatusCode  uint      `json:"status_code"`          // 状态码，0-成功，其他值-失败
+	StatusMsg   string    `json:"status_msg,omitempty"` // 返回状态描述
+	CommentList []Comment `json:"comment_list_id"`
 }
 
-// ----------------错误信息 模型-------------------
+// ----------------响应 模型-------------------
 type Response struct {
 	StatusCode int32  `json:"status_code"`
 	StatusMsg  string `json:"status_msg,omitempty"`

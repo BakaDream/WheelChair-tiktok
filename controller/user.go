@@ -16,12 +16,12 @@ func Register(c *gin.Context) {
 	password := c.Query("password")
 	ip := c.ClientIP()
 	var user m.User
-	result := g.DB.Where("UserName = ?", username).Find(&user)
+	result := g.DB.Where("UserName = ?", username).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// 没有找到记录
-			hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-			if err != nil {
+			hash, result := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			if result != nil {
 				log.Fatal("Hash error\n")
 			}
 			user = m.User{Password: string(hash), UserName: username, IP: ip}
@@ -48,12 +48,12 @@ func Login(c *gin.Context) {
 	username := c.Query("username")
 	password := c.Query("password")
 	var user m.User
-	result := g.DB.Where("UserName = ? AND Password = ?", username, password).Find(&user)
+	result := g.DB.Where("UserName = ?", username).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			// 没有找到记录
-			log.Println("The username or password is incorrect")
-			c.JSON(http.StatusOK, m.Response{StatusCode: 1, StatusMsg: "The username or password is incorrect"})
+			log.Println("The username is not exist")
+			c.JSON(http.StatusOK, m.Response{StatusCode: 1, StatusMsg: "The username is not exist\n"})
 			return
 		} else {
 			// 查询过程中发生了其他错误
