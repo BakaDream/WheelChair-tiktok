@@ -46,12 +46,12 @@ func Publish(c *gin.Context) {
 		})
 		return
 	}
-	cover_url := g.ServerInfo.Server.StaticFileUrl + "snapshot/" + file.Filename + ".jpg"
-	play_url := g.ServerInfo.Server.StaticFileUrl + file.Filename
+	coverUrl := g.ServerInfo.Server.StaticFileUrl + "snapshot/" + file.Filename + ".jpg"
+	playUrl := g.ServerInfo.Server.StaticFileUrl + file.Filename
 
-	result := g.DB.Create(&m.Video{UserID: uid, Title: title, FavoriteCount: 0, CommentCount: 0, PlayUrl: play_url, CoverUrl: cover_url})
+	result := g.DB.Create(&m.Video{UserID: uid, Title: title, FavoriteCount: 0, CommentCount: 0, PlayUrl: playUrl, CoverUrl: coverUrl})
 	if result != nil {
-
+		log.Fatal("An error occurred in the creation")
 	}
 	result = g.DB.Model(&m.User{}).Update("WorkCount", gorm.Expr("WorkCount + ?", 1))
 	if result != nil {

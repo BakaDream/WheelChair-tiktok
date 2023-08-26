@@ -3,12 +3,14 @@ package controller
 import (
 	g "WheelChair-tiktok/global"
 	m "WheelChair-tiktok/model"
+	"WheelChair-tiktok/utils"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 func Register(c *gin.Context) {
@@ -68,7 +70,7 @@ func Login(c *gin.Context) {
 			log.Println("Login successful")
 		}
 	}
-	//返回 UserRegisterResponse
+	//返回 UserLoginResponse
 	//生成token
 	//c.JSON(http.StatusOK, UserLoginResponse{
 	//	Response: model.Response{StatusCode: 0},
@@ -77,7 +79,31 @@ func Login(c *gin.Context) {
 	//})
 }
 
-// 检验身份信息token
+// 获取用户信息
 func UserInfo(c *gin.Context) {
-
+	Uid, err := strconv.Atoi(c.Query("user_id"))
+	if err != nil {
+		log.Println("The type of VideoID is incorrect")
+	}
+	if !utils.CheckToken(c.Query("token")) {
+		c.JSON(http.StatusOK, m.Response{
+			StatusCode: 1,
+			StatusMsg:  "Invalid token",
+		})
+		return
+	}
+	var user m.User
+	result := g.DB.Where("ID = ?", Uid).First(&user)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			log.Println("The username is not exist")
+		} else {
+			log.Fatal("Unknown error\n")
+		}
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status_code": 0,
+		"status_msg":  "Success",
+		"user":        user,
+	})
 }
