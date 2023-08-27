@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"io"
 	"log"
 	"mime/multipart"
 	"os"
@@ -9,7 +10,8 @@ import (
 var Storage Store
 
 type Store interface {
-	UploadFile(file *multipart.FileHeader) (string, error)
+	UploadFile(file io.Reader, filePath string) (string, error)
+	GetSnapshot(videoFile *multipart.FileHeader) (string, error)
 }
 
 func Init() Store {
@@ -17,8 +19,8 @@ func Init() Store {
 	case "TencentCOS":
 		Storage = &TencentCos{
 			CosUrl:    os.Getenv("TENCENT_COS_URL"),
-			SecretId:  os.Getenv("Tencent_COS_SecretKey"),
-			SecretKey: os.Getenv("Tencent_COS_SecretKey"),
+			SecretId:  os.Getenv("TENCENT_COS_SECRET_ID"),
+			SecretKey: os.Getenv("TENCENT_COS_SECRET_KEY"),
 		}
 	case "Local":
 		Storage = &Local{
