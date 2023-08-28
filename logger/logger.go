@@ -1,52 +1,76 @@
 package logger
 
 import (
-	"WheelChair-tiktok/global"
-	"errors"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
+	"log"
 	"os"
+	"path/filepath"
+	"strconv"
+	"time"
 )
 
+var Logger *zap.SugaredLogger
+
 // InitLogger 初始化Logger组件
-func InitLogger() error {
-	var level zapcore.Level
+func Init() {
 
-	// 解析日志级别
-	err := level.UnmarshalText([]byte(logLevel))
-	if err != nil {
-		return err
-	}
-
-	var output zapcore.WriteSyncer
-
-	// 根据日志输出类型创建WriteSyncer
-	switch logOutput {
-	case "stdout":
-		output = zapcore.Lock(zapcore.AddSync(os.Stdout))
-	case "stderr":
-		output = zapcore.Lock(zapcore.AddSync(os.Stderr))
+	var logLevel zapcore.Level
+	switch os.Getenv("LOG_LEVEL") {
+	case "DEBUG":
+		{
+			logLevel = zapcore.DebugLevel
+		}
+	case "INFO":
+		{
+			logLevel = zapcore.InfoLevel
+		}
 	default:
-		// 如果需要将日志输出到文件，可以在这里添加相应的逻辑
-		// output = zapcore.Lock(zapcore.AddSync(yourLogFile))
-		return errors.New("unsupported log output type")
+		log.Fatal("logLevel设置错误")
 	}
 
-	// 配置日志编码器
+	core := zapcore.NewCore(getEncoder(), zapcore.NewMultiWriteSyncer(getWriteSyncer(), zapcore.AddSync(os.Stdout)), logLevel)
+	Logger = zap.New(core).Sugar()
+}
+
+func getEncoder() zapcore.Encoder {
 	encoderConfig := zap.NewProductionEncoderConfig()
-	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.TimeKey = "time"
+	//todo 彩色
+	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 
-	core := zapcore.NewCore(
-		zapcore.NewJSONEncoder(encoderConfig),
-		output,
-		level,
-	)
+	encoderConfig.EncodeTime = func(t time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(t.Local().Format(time.DateTime))
+	}
+	return zapcore.NewJSONEncoder(encoderConfig)
+}
 
-	// 创建Logger
-	global.Logger = zap.New(core)
+func getWriteSyncer() zapcore.WriteSyncer {
+	stSeparator := string(filepath.Separator)
+	stRootDir, _ := os.Getwd()
+	stLogFilepath := stRootDir + stSeparator + "log" + stSeparator + time.Now().Format(time.DateOnly) + ".log"
 
-	// 替换全局Logger
-	zap.ReplaceGlobals(global.Logger)
+	// 日志切割
+	maxSize, err := strconv.Atoi(os.Getenv("LOG_MAX_SIZE"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	maxBackups, err := strconv.Atoi(os.Getenv("LOG_MAX_BACKUPS"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	maxAge, err := strconv.Atoi(os.Getenv("LOG_MAX_AGE"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	lumberjackSyncer := &lumberjack.Logger{
+		Filename:   stLogFilepath,
+		MaxSize:    maxSize,
+		MaxBackups: maxBackups,
+		MaxAge:     maxAge, //days
+		Compress:   true,   // disabled by default
+	}
+	return zapcore.AddSync(lumberjackSyncer)
 
-	return nil
 }

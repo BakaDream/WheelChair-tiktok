@@ -1,11 +1,10 @@
 package controller
 
 import (
-	g "WheelChair-tiktok/global"
 	m "WheelChair-tiktok/model"
+	resp "WheelChair-tiktok/model/response"
+	"WheelChair-tiktok/service"
 	"WheelChair-tiktok/utils"
-	"crypto/sha256"
-	"encoding/hex"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"log"
@@ -13,47 +12,43 @@ import (
 	"strconv"
 )
 
+// 上传视频
 func Publish(c *gin.Context) {
-	tokenString := c.PostForm("token")
-	uid, err := utils.GetUserID(tokenString)
-	if err != nil {
-		c.JSON(http.StatusOK, m.Response{
-			StatusCode: 1,
-			StatusMsg:  "invalid token",
-		})
-		return
-	}
-
 	title := c.PostForm("title")
 	file, err := c.FormFile("data")
+	token := c.PostForm("token")
+	iClaims, _ := utils.ParseToken(token)
+	uid := iClaims.ID
 	if err != nil {
 		return
 	}
-	file.Filename = hashFileName(file.Filename)
-	err = c.SaveUploadedFile(file, "./public/"+file.Filename)
-	if err != nil {
-		c.JSON(http.StatusOK, m.Response{
-			StatusCode: 1,
-			StatusMsg:  err.Error(),
-		})
-		return
-	}
-	_, err = utils.GetSnapshot("./public/"+file.Filename, "./public/snapshot/"+file.Filename, 1) //get the first frame of the video
-	if err != nil {
-		c.JSON(http.StatusOK, m.Response{
-			StatusCode: 1,
-			StatusMsg:  err.Error(),
-		})
-		return
-	}
-	coverUrl := g.ServerInfo.Server.StaticFileUrl + "snapshot/" + file.Filename + ".jpg"
-	playUrl := g.ServerInfo.Server.StaticFileUrl + file.Filename
 
-	result := g.DB.Create(&m.Video{UserID: uid, Title: title, FavoriteCount: 0, CommentCount: 0, PlayUrl: playUrl, CoverUrl: coverUrl})
+	//检测文件是否为视频文件
+	if utils.IsVideoFile(file.Filename) {
+		c.JSON(http.StatusOK, resp.Publish{
+			StatusCode: 1,
+			StatusMsg:  "is’t a valid video file",
+		})
+		return
+	}
+
+	//给视频一个hashName
+	file.Filename = utils.HashFileName(file.Filename)
+	//保存文件
+	playUrl, coverUrl, err := service.UploadVideo(file)
+	if err != nil {
+		c.JSON(http.StatusOK, m.Response{
+			StatusCode: 1,
+			StatusMsg:  err.Error(),
+		})
+		return
+	}
+
+	result := m.DB.Create(&m.Video{UserID: uid, Title: title, FavoriteCount: 0, CommentCount: 0, PlayUrl: playUrl, CoverUrl: coverUrl})
 	if result != nil {
 		log.Fatal("An error occurred in the creation")
 	}
-	result = g.DB.Model(&m.User{}).Update("WorkCount", gorm.Expr("WorkCount + ?", 1))
+	result = m.DB.Model(&m.User{}).Update("WorkCount", gorm.Expr("WorkCount + ?", 1))
 	if result != nil {
 		c.JSON(http.StatusOK, m.Response{
 			StatusCode: 1,
@@ -78,7 +73,7 @@ func PublishList(c *gin.Context) {
 		return
 	}
 	var videoList []m.Video
-	result := g.DB.Where("UserID = ?", UserID).Find(&videoList)
+	result := m.DB.Where("UserID = ?", UserID).Find(&videoList)
 	if result.Error != nil {
 		log.Fatal("Unknow error")
 	}
@@ -86,18 +81,4 @@ func PublishList(c *gin.Context) {
 		StatusCode: 0,
 		VideoList:  videoList,
 	})
-}
-
-func hashFileName(fileName string) string {
-	// 创建SHA256哈希对象
-	hash := sha256.New()
-
-	// 将文件名转换为字节数组并进行哈希计算
-	hash.Write([]byte(fileName))
-
-	// 获取哈希值并转换为十六进制字符串
-	hashedBytes := hash.Sum(nil)
-	hashedString := hex.EncodeToString(hashedBytes)
-
-	return hashedString
 }

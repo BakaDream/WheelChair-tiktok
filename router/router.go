@@ -2,27 +2,48 @@ package router
 
 import (
 	"WheelChair-tiktok/controller"
+	"WheelChair-tiktok/middleware"
 	"github.com/gin-gonic/gin"
 )
 
-func initRouter(r *gin.Engine) {
-	// public directory is used to serve static resources
-	r.Static("/static", "./public")
+func InitRouter() *gin.Engine {
+	r := gin.Default()
+	// 主路由组
+	douyinGroup := r.Group("/douyin")
+	{
+		// user路由组
+		userGroup := douyinGroup.Group("/user")
+		{
+			userGroup.POST("/register/", controller.Register)
+			userGroup.GET("/", middleware.Auth(), controller.UserInfo)
+			userGroup.POST("/login/", controller.Login)
+		}
 
-	apiRouter := r.Group("/douyin")
+		// publish路由组
+		publishGroup := douyinGroup.Group("/publish")
+		{
+			publishGroup.POST("/action/", middleware.Auth(), controller.Publish)
+			publishGroup.GET("/list/", middleware.Auth(), controller.PublishList)
 
-	// basic apis
-	apiRouter.GET("/feed/", controller.Feed)
-	apiRouter.GET("/user/", controller.UserInfo)
-	apiRouter.POST("/user/register/", controller.Register)
-	apiRouter.POST("/user/login/", controller.Login)
-	apiRouter.POST("/publish/action/", controller.Publish)
-	apiRouter.GET("/publish/list/", controller.PublishList)
+		}
 
-	// extra apis - I
-	apiRouter.POST("/favorite/action/", controller.FavoriteAction)
-	apiRouter.GET("/favorite/list/", controller.FavoriteList)
-	apiRouter.POST("/comment/action/", controller.CommentAction)
-	apiRouter.GET("/comment/list/", controller.CommentList)
+		// feed
+		//douyinGroup.GET("/feed/", controller.Feed)
 
+		favoriteGroup := douyinGroup.Group("favorite")
+		{
+			favoriteGroup.POST("/action/", middleware.Auth(), controller.FavoriteAction)
+			favoriteGroup.GET("/list/", middleware.Auth(), controller.FavoriteList)
+		}
+
+		// comment路由组
+		commentGroup := douyinGroup.Group("/comment")
+		{
+			commentGroup.POST("/action/", middleware.Auth(), controller.CommentAction)
+			commentGroup.GET("/list/", middleware.Auth(), controller.CommentList)
+		}
+
+	}
+
+	return r
 }

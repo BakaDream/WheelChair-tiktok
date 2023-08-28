@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"WheelChair-tiktok/global"
+	"WheelChair-tiktok/logger"
 	"context"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -12,6 +12,8 @@ import (
 type RedisClient struct {
 	RC *redis.Client
 }
+
+var RDB = RedisClient{}
 
 var nDuration = 30 * 24 * 60 * 60 * time.Second
 
@@ -24,19 +26,19 @@ func RedisInit() {
 	})
 	_, err := rc.Ping(context.Background()).Result()
 	if err != nil {
-		global.Logger.Fatal("Redis init failed", zap.Error(err))
+		logger.Logger.Fatal("Redis init failed", zap.Error(err))
 	}
-	global.RedisClient.RC = rc
+	RDB.RC = rc
 
 }
 func (rc *RedisClient) Set(key string, value any) error {
-	return global.RedisClient.RC.Set(context.Background(), key, value, nDuration).Err()
+	return RDB.RC.Set(context.Background(), key, value, nDuration).Err()
 }
 
 func (rc *RedisClient) Get(key string) (any, error) {
-	return global.RedisClient.RC.Get(context.Background(), key).Result()
+	return RDB.RC.Get(context.Background(), key).Result()
 }
 
 func (rc *RedisClient) Delete(key ...string) error {
-	return global.RedisClient.RC.Del(context.Background(), key...).Err()
+	return RDB.RC.Del(context.Background(), key...).Err()
 }

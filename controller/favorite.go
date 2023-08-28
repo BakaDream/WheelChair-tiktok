@@ -1,7 +1,7 @@
 package controller
 
 import (
-	g "WheelChair-tiktok/global"
+	//g "WheelChair-tiktok/global"
 	m "WheelChair-tiktok/model"
 	"WheelChair-tiktok/utils"
 	"errors"
@@ -32,26 +32,26 @@ func FavoriteAction(c *gin.Context) {
 		return
 	}
 	var storeUserVideoLike m.UserVideoLike
-	result := g.DB.Where("UserID = ? and VideoID = ?", UserID, VideoID).First(&storeUserVideoLike)
+	result := m.DB.Where("UserID = ? and VideoID = ?", UserID, VideoID).First(&storeUserVideoLike)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) && actionType == 1 {
 			// 没有找到记录
-			g.DB.Create(&m.UserVideoLike{VideoID: uint(VideoID), UserID: UserID})
-			g.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("FavoriteComment", gorm.Expr("FavoriteComment + ?", 1))
+			m.DB.Create(&m.UserVideoLike{VideoID: uint(VideoID), UserID: UserID})
+			m.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("FavoriteComment", gorm.Expr("FavoriteComment + ?", 1))
 			var video m.Video
-			g.DB.Where("ID = ?", VideoID).First(&video)
-			g.DB.Model(&m.User{}).Where("ID = ?", video.UserID).Update("TotalFavorited", gorm.Expr("TotalFavorited + ?", 1))
+			m.DB.Where("ID = ?", VideoID).First(&video)
+			m.DB.Model(&m.User{}).Where("ID = ?", video.UserID).Update("TotalFavorited", gorm.Expr("TotalFavorited + ?", 1))
 			c.JSON(http.StatusOK, m.FavoriteActionResponse{StatusCode: 0})
 		} else {
 			// 查询过程中发生了其他错误
 			log.Fatal("Unknown error")
 		}
 	} else if actionType == 2 {
-		g.DB.Delete(&storeUserVideoLike)
-		g.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("FavoriteComment", gorm.Expr("FavoriteComment + ?", -1))
+		m.DB.Delete(&storeUserVideoLike)
+		m.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("FavoriteComment", gorm.Expr("FavoriteComment + ?", -1))
 		var video m.Video
-		g.DB.Where("ID = ?", VideoID).First(&video)
-		g.DB.Model(&m.User{}).Where("ID = ?", video.UserID).Update("TotalFavorited", gorm.Expr("TotalFavorited + ?", -1))
+		m.DB.Where("ID = ?", VideoID).First(&video)
+		m.DB.Model(&m.User{}).Where("ID = ?", video.UserID).Update("TotalFavorited", gorm.Expr("TotalFavorited + ?", -1))
 		c.JSON(http.StatusOK, m.FavoriteActionResponse{StatusCode: 0})
 	}
 }
@@ -62,7 +62,7 @@ func FavoriteList(c *gin.Context) {
 		return
 	}
 	var storeUserVideoLike []m.UserVideoLike
-	result := g.DB.Where("UserID = ?", UserID).Order("CreateAt DESC").Find(&storeUserVideoLike)
+	result := m.DB.Where("UserID = ?", UserID).Order("CreateAt DESC").Find(&storeUserVideoLike)
 	if result != nil {
 		fmt.Println("Make UserVideoLikeList Error:", err)
 		return
@@ -72,7 +72,7 @@ func FavoriteList(c *gin.Context) {
 		storeVideoID = append(storeVideoID, Video.VideoID)
 	}
 	var storeVideoList []m.Video
-	result = g.DB.Where("ID IN (?)", storeVideoID).Find(&storeVideoList)
+	result = m.DB.Where("ID IN (?)", storeVideoID).Find(&storeVideoList)
 	if result != nil {
 		fmt.Println("Make VideoList Error:", err)
 		return

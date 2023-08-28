@@ -1,13 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"WheelChair-tiktok/cache"
+	"WheelChair-tiktok/config"
+	"WheelChair-tiktok/logger"
+	"WheelChair-tiktok/model"
+	"WheelChair-tiktok/router"
+	"WheelChair-tiktok/utils/storage"
 )
-import "WheelChair-tiktok/config"
 
 func main() {
 	config.LoadEnv()
+	logger.Init()
+	storage.Init()
+	model.DatabaseConn()
+	cache.RedisInit()
+	r := router.InitRouter()
+	r.Run("0.0.0.0:80")
 
-	fmt.Println(os.Getenv("MYSQL_DSN"))
 }

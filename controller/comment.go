@@ -1,7 +1,6 @@
 package controller
 
 import (
-	g "WheelChair-tiktok/global"
 	m "WheelChair-tiktok/model"
 	u "WheelChair-tiktok/utils"
 	"fmt"
@@ -33,11 +32,11 @@ func CommentAction(c *gin.Context) {
 	if actionType == 1 {
 		text := c.Query("comment_text")
 		storeComment := m.Comment{UserID: UserID, VideoID: uint(VideoID), Content: text}
-		err := g.DB.Create(&storeComment)
+		err := m.DB.Create(&storeComment)
 		if err.Error != nil {
 			log.Fatal("Comment Upload failed")
 		}
-		err = g.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("CommentCount", gorm.Expr("CommentCount + ?", 1))
+		err = m.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("CommentCount", gorm.Expr("CommentCount + ?", 1))
 		if err != nil {
 			log.Fatal("Failed to update video comment count")
 		}
@@ -47,11 +46,11 @@ func CommentAction(c *gin.Context) {
 		})
 	} else if actionType == 2 {
 		commentID := c.Query("comment_id")
-		result := g.DB.Delete(&m.Comment{}, commentID)
+		result := m.DB.Delete(&m.Comment{}, commentID)
 		if result.Error != nil {
 			log.Fatal("Comment delete failed")
 		}
-		err := g.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("CommentCount", gorm.Expr("CommentCount + ?", -1))
+		err := m.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("CommentCount", gorm.Expr("CommentCount + ?", -1))
 		if err != nil {
 			log.Fatal("Failed to update video comment count")
 		}
@@ -65,7 +64,7 @@ func CommentList(c *gin.Context) {
 		return
 	}
 	var Comments []m.Comment
-	result := g.DB.Where("VideoID = ?", videoID).Order("CreateAt DESC").Find(&Comments)
+	result := m.DB.Where("VideoID = ?", videoID).Order("CreateAt DESC").Find(&Comments)
 	if result != nil {
 		fmt.Println("Make CommentList Error:", err)
 		return

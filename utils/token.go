@@ -1,8 +1,8 @@
 package utils
 
-func GenerateToken(username string, uid int64) string {
-	return ""
-}
+//	func GenerateToken(username string, uid int64) string {
+//		return ""
+//	}
 func CheckToken(tokenString string) bool {
 	return false
 }

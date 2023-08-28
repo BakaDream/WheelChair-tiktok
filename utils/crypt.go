@@ -1,6 +1,8 @@
 package utils
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"golang.org/x/crypto/bcrypt"
+)
 
 // 加密
 func Encrypt(text string) (string, error) {
@@ -12,9 +14,9 @@ func Encrypt(text string) (string, error) {
 }
 
 // 判断密码和数据库中的是否相同
-func BcryptCheck(textA string, hashtextB string) bool {
-	hashTextA, _ := Encrypt(textA)
-	if hashTextA == hashtextB {
+func BcryptCheck(password string, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err == nil {
 		return true
 	} else {
 		return false

@@ -1,6 +1,9 @@
 package utils
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
 
 /*
 IsVideoFile 检查文件是否为视频文件
@@ -17,4 +20,11 @@ func IsVideoFile(fileName string) bool {
 		}
 	}
 	return false
+}
+
+func IsPasswordValid(password string) error {
+	if len(password) >= 5 {
+		return nil
+	}
+	return errors.New("password is invalid")
 }

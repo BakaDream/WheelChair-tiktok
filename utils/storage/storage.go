@@ -1,8 +1,8 @@
 package storage
 
 import (
+	"WheelChair-tiktok/logger"
 	"io"
-	"log"
 	"mime/multipart"
 	"os"
 )
@@ -27,8 +27,7 @@ func Init() Store {
 			Static: os.Getenv("LOCAL_STATIC_URL"),
 		}
 	default:
-		log.Fatal("Can't Load Storage Config, Please Check env")
-
+		logger.Logger.Fatal("Storage type has some err")
 	}
 	return nil
 }

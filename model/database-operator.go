@@ -1,25 +1,29 @@
 package model
 
 import (
-	"WheelChair-tiktok/global"
+	"WheelChair-tiktok/logger"
 	"database/sql"
 	mysqlDriver "github.com/go-sql-driver/mysql"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
+	"os"
 )
+
+var DB *gorm.DB
+var DSN string
 
 var TABLES = []interface{}{
 	&Video{}, &Comment{}, &User{}, &UserVideoLike{}, //&UserFollow,
 }
 
 func databaseCreate() {
-	db, err := sql.Open("mysql", global.DSN)
+	db, err := sql.Open("mysql", DSN)
 	if err != nil {
 		log.Fatal("Failed to connect database\n")
 	}
 	defer db.Close()
-	config, err := mysqlDriver.ParseDSN(global.DSN) //解析
+	config, err := mysqlDriver.ParseDSN(DSN) //解析
 	if err != nil {
 		log.Fatal("Failed to parse DSN:", err)
 		return
@@ -34,7 +38,7 @@ func databaseCreate() {
 } //创建新的数据库
 
 func databseInit() {
-	db, err := gorm.Open(mysql.Open(global.DSN), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to init database\n")
 	}
@@ -44,15 +48,14 @@ func databseInit() {
 	log.Println("MySQL database init successfully")
 } //数据库初始化
 
-func DatabaseConn(initialize bool) {
+func DatabaseConn() {
+	DSN = os.Getenv("MYSQL_DSN")
 	databaseCreate()
-	if initialize == true {
-		databseInit()
-	}
-	db, err := gorm.Open(mysql.Open(global.DSN), &gorm.Config{})
+	databseInit()
+	db, err := gorm.Open(mysql.Open(DSN), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Failed to connect database\n")
 	}
-	log.Println("MySQL database connect successfully")
-	global.DB = db
+	logger.Logger.Info("MySQL database connect successfully")
+	DB = db
 }
