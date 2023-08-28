@@ -18,18 +18,21 @@ var TABLES = []interface{}{
 }
 
 func databaseCreate() {
-	db, err := sql.Open("mysql", DSN)
-	if err != nil {
-		log.Fatal("Failed to connect database\n")
-	}
-	defer db.Close()
 	config, err := mysqlDriver.ParseDSN(DSN) //解析
 	if err != nil {
 		log.Fatal("Failed to parse DSN:", err)
 		return
 	}
-	// 提取数据库名称
 	dbName := config.DBName
+	newdbName := ""
+	// 添加新的数据库名到配置中
+	config.DBName = newdbName
+	db, err := sql.Open("mysql", config.FormatDSN())
+	if err != nil {
+		log.Fatal("Failed to connect database\n")
+	}
+	defer db.Close()
+	// 提取数据库名称
 	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + dbName)
 	if err != nil {
 		log.Fatal("Failed to create database\n")
