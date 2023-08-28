@@ -20,6 +20,17 @@ func Register(c *gin.Context) {
 	u.IP = c.ClientIP()
 	// 检测密码是否合法
 	err := utils.IsPasswordValid(u.Password)
+	// 密码不合法
+	if err != nil {
+		l.Logger.Infof("Registration attempt failed for user '%s' due to an invalid password. IP: %s", u.UserName, c.ClientIP())
+		c.JSON(http.StatusOK, resp.Register{
+			StatusCode: 1,
+			StatusMsg:  "Password is invalid",
+			UserId:     0,
+			Token:      "",
+		})
+		return
+	}
 	if err == nil {
 		//调用添加用户服务
 		nUser, err := service.AddUser(u)
@@ -39,39 +50,29 @@ func Register(c *gin.Context) {
 		}
 	}
 	// 执行到这 err != nil 开始处理错误
+	if err != nil {
 
-	// 密码不合法
-	if err.Error() == "password is invalid" {
-		l.Logger.Infof("Registration attempt failed for user '%s' due to an invalid password. IP: %s", u.UserName, c.ClientIP())
-		c.JSON(http.StatusOK, resp.Register{
-			StatusCode: 1,
-			StatusMsg:  "Password is invalid",
-			UserId:     0,
-			Token:      "",
-		})
-		return
-	}
+		// 用户已注册
+		if err.Error() == "user has already registered" {
+			l.Logger.Infof("Registration attempt failed for user '%s' because the user is already registered. IP: %s", u.UserName, c.ClientIP())
+			c.JSON(http.StatusOK, resp.Register{
+				StatusCode: 0,
+				StatusMsg:  "User has already registered",
+				UserId:     0,
+				Token:      "",
+			})
+			return
+		}
 
-	// 用户已注册
-	if err.Error() == "user has already registered" {
-		l.Logger.Infof("Registration attempt failed for user '%s' because the user is already registered. IP: %s", u.UserName, c.ClientIP())
+		// 剩余一些 未知err 一般是service 执行err log error
+		l.Logger.Errorf("Login attempt failed for user '%s' due to service err: %s. IP : %s", u.UserName, err.Error(), c.ClientIP())
 		c.JSON(http.StatusOK, resp.Register{
 			StatusCode: 0,
-			StatusMsg:  "User has already registered",
+			StatusMsg:  "Register failed,please retry it",
 			UserId:     0,
 			Token:      "",
 		})
-		return
 	}
-
-	// 剩余一些 未知err 一般是service 执行err log error
-	l.Logger.Errorf("Login attempt failed for user '%s' due to service err: %s. IP : %s", u.UserName, err.Error(), c.ClientIP())
-	c.JSON(http.StatusOK, resp.Register{
-		StatusCode: 0,
-		StatusMsg:  "Register failed,please retry it",
-		UserId:     0,
-		Token:      "",
-	})
 }
 
 func Login(c *gin.Context) {
