@@ -49,7 +49,8 @@ func Auth() func(c *gin.Context) {
 		}
 
 		// todo: token过期 续期
-
+		c.Set("uid", iClaims.ID)
+		c.Set("username", iClaims.UserName)
 		c.Next()
 	}
 }
