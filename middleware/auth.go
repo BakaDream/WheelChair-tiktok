@@ -17,12 +17,16 @@ func tokenErr(c *gin.Context, statusMsg string) {
 func Auth() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		token := c.Query("token")
-
-		//token不存在，直接返回
+		//token 不存在
 		if token == "" {
-			tokenErr(c, "please login")
-			c.Abort()
-			return
+			// 尝试从postform中获取token
+			token = c.PostForm("token")
+			//token获取不到 返回
+			if token == "" {
+				tokenErr(c, "please login")
+				c.Abort()
+				return
+			}
 		}
 
 		// 解析token
