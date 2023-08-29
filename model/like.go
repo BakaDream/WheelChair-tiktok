@@ -1,10 +1,10 @@
 package model
 
-type Like struct {
+type Favorite struct {
 	UserID  uint
 	VideoID uint
 }
 
-func (Like) TableName() string {
-	return "like"
+func (Favorite) TableName() string {
+	return "favorite"
 }

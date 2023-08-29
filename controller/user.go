@@ -156,7 +156,7 @@ func UserInfo(c *gin.Context) {
 		c.JSON(http.StatusOK, resp.UserInfo{
 			StatusCode: 0,
 			StatusMsg:  "successful",
-			User:       user,
+			User:       user.ToResponse(true),
 		})
 		return
 	}
