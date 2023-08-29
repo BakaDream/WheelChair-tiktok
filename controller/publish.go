@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"WheelChair-tiktok/logger"
 	m "WheelChair-tiktok/model"
 	resp "WheelChair-tiktok/model/response"
 	"WheelChair-tiktok/service"
@@ -16,13 +17,9 @@ import (
 func Publish(c *gin.Context) {
 	title := c.PostForm("title")
 	file, err := c.FormFile("data")
-	token := c.PostForm("token")
-	iClaims, _ := utils.ParseToken(token)
-	uid := iClaims.ID
-	if err != nil {
-		return
-	}
-
+	// 从上下文中获取用户信息
+	anyUid, _ := c.Get("uid")
+	uid := anyUid.(uint)
 	//检测文件是否为视频文件
 	if utils.IsVideoFile(file.Filename) {
 		c.JSON(http.StatusOK, resp.Publish{
@@ -44,11 +41,14 @@ func Publish(c *gin.Context) {
 		return
 	}
 
-	result := m.DB.Create(&m.Video{UserID: uid, Title: title, FavoriteCount: 0, CommentCount: 0, PlayUrl: playUrl, CoverUrl: coverUrl})
+	result := m.DB.Create(&m.Video{UserID: uid, Title: title, FavoriteCount: 0, CommentCount: 0, PlayUrl: playUrl, CoverUrl: coverUrl}).Error
 	if result != nil {
 		log.Fatal("An error occurred in the creation")
 	}
-	result = m.DB.Model(&m.User{}).Update("WorkCount", gorm.Expr("WorkCount + ?", 1))
+	// {"level":"INFO","time":"2023-08-29 00:05:15","msg":"WHERE conditions required"}
+	result = m.DB.Model(&m.User{}).Update("WorkCount", gorm.Expr("WorkCount + ?", 1)).Error
+	logger.Logger.Infof(result.Error())
+
 	if result != nil {
 		c.JSON(http.StatusOK, m.Response{
 			StatusCode: 1,
