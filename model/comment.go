@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type Comment struct {
 	gorm.Model
-	UserID  uint   `gorm:"user_id" json:"-"`
-	VideoID uint   `json:"video_id"`
-	Content string `gorm:"not null" json:"content"`
+	UserID  uint   `gorm:"column:user_id"`  //评论者id
+	VideoID uint   `gorm:"column:video_id"` //视频id
+	Content string `gorm:"column:content"`  //内容
 }

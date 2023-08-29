@@ -14,7 +14,7 @@ var DB *gorm.DB
 var DSN string
 
 var TABLES = []interface{}{
-	&Video{}, &Comment{}, &User{}, &Follow{}, &Like{},
+	&Video{}, &Comment{}, &User{}, &Follow{}, &Favorite{},
 }
 
 func databaseCreate() {
