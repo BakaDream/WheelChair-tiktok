@@ -1,60 +1,74 @@
 package controller
 
 import (
-	m "WheelChair-tiktok/model"
-	//g "WheelChair-tiktok/global"
 	l "WheelChair-tiktok/logger"
+	m "WheelChair-tiktok/model"
 	resp "WheelChair-tiktok/model/response"
-	"WheelChair-tiktok/utils"
-	"errors"
+	"WheelChair-tiktok/service"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 )
 
 func FavoriteAction(c *gin.Context) {
-	token := c.Query("toekn")
-	VideoID, err := strconv.Atoi(c.Query("video_id"))
+	//从上下文中获取uid username
+	uid, _ := c.Get("uid")
+	username, _ := c.Get("username")
+	//获取用户传入的videoID，Action type 并进行一定错误处理
+	videoID, err := strconv.Atoi(c.Query("video_id"))
 	if err != nil {
-		l.Logger.Infof("The type of VideoID is incorrect.IP: %s", c.ClientIP())
+		l.Logger.Infof("User '%s' favoriteAction err,because %s. Client IP %s", username.(string), err.Error(), c.ClientIP())
+		favoriteActionRespErr(c, "params video_id  invalid")
 		return
 	}
 	actionType, err := strconv.Atoi(c.Query("action_type"))
 	if err != nil {
-		l.Logger.Infof("The type parameter is incorrect.IP: %s", c.ClientIP())
+		l.Logger.Infof("User '%s' favoriteAction err,because %s. Client IP %s", username.(string), err.Error(), c.ClientIP())
+		favoriteActionRespErr(c, "params video_id  invalid")
 		return
 	}
-	UserID, err := utils.GetUserID(token)
-	if err != nil {
-		l.Logger.Infof("get userinfo attempt failed for id '%d' because the user does not exist. IP: %s", UserID, c.ClientIP())
-		c.JSON(http.StatusOK, resp.FavoriteAction{StatusCode: 1, StatusMsg: "favorite failed"})
-		return
-	}
-	var storeUserVideoLike m.Favorite
-	result := m.DB.Where("UserID = ? and VideoID = ?", UserID, VideoID).First(&storeUserVideoLike)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) && actionType == 1 {
-			// 没有找到记录
-			m.DB.Create(&m.Favorite{VideoID: uint(VideoID), UserID: UserID})
-			m.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("FavoriteComment", gorm.Expr("FavoriteComment + ?", 1))
-			var video m.Video
-			m.DB.Where("ID = ?", VideoID).First(&video)
-			m.DB.Model(&m.User{}).Where("ID = ?", video.AuthorID).Update("TotalFavorited", gorm.Expr("TotalFavorited + ?", 1))
-			c.JSON(http.StatusOK, resp.FavoriteAction{StatusCode: 1, StatusMsg: "favorite successful"})
-		} else {
-			// 查询过程中发生了其他错误
-			l.Logger.Error("Unknown error")
+
+	// action_type 1-点赞，2-取消点赞
+	//点赞相关操作
+	if actionType == 1 {
+		err = service.Favorite(uint(videoID), uid.(uint))
+		if err != nil {
+			l.Logger.Errorf("User '%s' favoriteAction err,because %s. Client IP %s", username.(string), err.Error(), c.ClientIP())
+			favoriteActionRespErr(c, err.Error())
+			return
 		}
-	} else if actionType == 2 {
-		m.DB.Delete(&storeUserVideoLike)
-		m.DB.Model(&m.Video{}).Where("ID = ?", VideoID).Update("FavoriteComment", gorm.Expr("FavoriteComment + ?", -1))
-		var video m.Video
-		m.DB.Where("ID = ?", VideoID).First(&video)
-		m.DB.Model(&m.User{}).Where("ID = ?", video.AuthorID).Update("TotalFavorited", gorm.Expr("TotalFavorited + ?", -1))
-		c.JSON(http.StatusOK, resp.FavoriteAction{StatusCode: 1, StatusMsg: "favorite successful"})
+		//点赞成功 响应
+		l.Logger.Infof("User %s Favorite video %d success. Client IP %s", username, videoID, c.ClientIP())
+		c.JSON(http.StatusOK, resp.FavoriteAction{
+			StatusCode: 0,
+			StatusMsg:  "successful",
+		})
+		return
 	}
+
+	//取消点赞
+	if actionType == 2 {
+		err = service.UnFavorite(uint(videoID), uid.(uint))
+		if err != nil {
+			l.Logger.Errorf("User '%s' UnfavoriteAction err,because %s. Client IP %s", username.(string), err.Error(), c.ClientIP())
+			//todo 更加详细的错误
+			favoriteActionRespErr(c, err.Error())
+			return
+		}
+		//取消点赞成功 响应
+		l.Logger.Infof("User %s UnFavorite video %d success. Client IP %s", username.(string), videoID, c.ClientIP())
+		c.JSON(http.StatusOK, resp.FavoriteAction{
+			StatusCode: 0,
+			StatusMsg:  "successful",
+		})
+		return
+	}
+	// 未知的actionType
+	l.Logger.Infof("User '%s' UnfavoriteAction %d err,because Illegal actionType. Client IP %s", username.(string), videoID, c.ClientIP())
+	favoriteActionRespErr(c, "Illegal actionType")
+	return
 }
+
 func FavoriteList(c *gin.Context) {
 	UserID, err := strconv.Atoi(c.Query("user_id"))
 	if err != nil {
@@ -62,7 +76,7 @@ func FavoriteList(c *gin.Context) {
 		return
 	}
 	var storeFavorite []m.Favorite
-	result := m.DB.Where("UserID = ?", UserID).Order("CreateAt DESC").Find(&storeFavorite)
+	result := m.DB.Where("user_id = ?", UserID).Order("CreateAt DESC").Find(&storeFavorite)
 	if result != nil {
 		l.Logger.Error("Make UserVideoLikeList Error:%v", err)
 		return
@@ -78,4 +92,12 @@ func FavoriteList(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp.FavoriteList{StatusCode: 0, StatusMsg: "Get FavoriteList successfully"})
+}
+
+func favoriteActionRespErr(c *gin.Context, err string) {
+	c.JSON(http.StatusOK, resp.FavoriteAction{
+		StatusCode: 1,
+		StatusMsg:  err,
+	})
+	return
 }
