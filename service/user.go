@@ -57,3 +57,12 @@ func GetUserInfo(id uint) (userInter m.User, err error) {
 	}
 	return userInter, err
 }
+
+func IsFollowing(followerID uint, followedID uint) bool {
+	var follow m.Follow
+	err := m.DB.Where("follower_id = ? AND followed_id = ?", followerID, followedID).First(&follow).Error
+	if errors.Is(gorm.ErrRecordNotFound, err) {
+		return false
+	}
+	return true
+}
