@@ -1,92 +1,64 @@
 package controller
 
 import (
-	m "WheelChair-tiktok/model"
+	l "WheelChair-tiktok/logger"
 	resp "WheelChair-tiktok/model/response"
+	"WheelChair-tiktok/service"
 	"WheelChair-tiktok/utils"
-	"errors"
-	"fmt"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-	"log"
 	"net/http"
 	"time"
 )
 
-var currentPage = 1 //全局变量记录当前page
-var MaxPerPage = 15
+func Feed(c *gin.Context) {
+	uid, _ := c.Get("uid")
+	lastTime := c.Query("latest_time")
+	//解析时间戳
+	parseLateTime, _ := utils.StringToTime(lastTime)
 
-func Feed(c *gin.Context) { // 默认每页加载 15 个视频
-	tokenString := c.Query("token")
-	if tokenString == "" {
-		videos := makeGuestVideoList(currentPage, MaxPerPage)
-		c.JSON(http.StatusOK, resp.Feed{
-			StatusCode: 0,
-			VideoList:  videos,
-			NextTime:   time.Now().Unix(),
-		})
-	} else {
-		uid, _ := utils.GetUserID(tokenString) //调用方法返回视频列表
-		videos := makeVideoList(currentPage, MaxPerPage, uid)
-		c.JSON(http.StatusOK, resp.Feed{
-			StatusCode: 0,
-			VideoList:  videos,
-			NextTime:   time.Now().Unix(),
-		})
-	}
-	currentPage++
-}
-
-func makeGuestVideoList(page, perPage int) []resp.Video {
-	offSet := (page - 1) * perPage //offSet:视频开始位置
-	var videos []m.Video
-	var videoSponse []resp.Video
-	// 构建查询
-	err := m.DB.Order("CreateAt DESC").Limit(perPage).Offset(offSet).Find(&videos)
-	if err != nil {
-		fmt.Println("Failed to execute query:", err)
-		return nil
-	}
-	if len(videos) < perPage {
-		currentPage = 0
-	}
-	for i := range videos {
-		var author resp.User
-		m.DB.First(&author, videos[i].AuthorID)
-		videoSponse[i] = videos[i].ToResponse(false, author)
-	}
-	return videoSponse //返回视频列表
-}
-
-func makeVideoList(page, perPage int, uid uint) []resp.Video {
-	offSet := (page - 1) * perPage //offSet:视频开始位置
-	var videos []m.Video
-	var videoSponse []resp.Video
-	err := m.DB.Order("publish_time DESC").Limit(perPage).Offset(offSet).Find(&videos)
-	if err != nil {
-		fmt.Println("Failed to execute query:", err)
-		return nil
-	}
-	if len(videos) < perPage {
-		currentPage = 0
-	}
-	for i, video := range videos {
-		result := m.DB.Where("VideoID = ? AND UserID", video.ID, uid).First(&m.Favorite{})
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				// 没有找到记录
-				var author resp.User
-				m.DB.First(&author, videos[i].AuthorID)
-				videoSponse[i] = videos[i].ToResponse(false, author)
-			} else {
-				// 查询过程中发生了其他错误
-				log.Fatal("Unknown error")
-			}
-		} else {
-			var author resp.User
-			m.DB.First(&author, videos[i].AuthorID)
-			videoSponse[i] = videos[i].ToResponse(true, author)
+	//如果为空，则设置为最新一个视频的时间戳
+	if parseLateTime == (time.Time{}) {
+		var err error
+		parseLateTime, err = service.GetLastVideoTime()
+		//错误处理
+		if err != nil {
+			l.Logger.Errorf("Get feed failed,Because %s,Client IP %s", err.Error(), c.ClientIP())
+			feedRespErr(c, "latest_time is error")
+			return
 		}
 	}
-	return videoSponse //返回视频列表
+	// 获取视频列表
+	videos, err := service.GetVideoList(parseLateTime)
+	if err != nil {
+		l.Logger.Errorf("Get feed failed,Because %s,Client IP %s", err.Error(), c.ClientIP())
+		feedRespErr(c, "get feed failed ,please retry it")
+		return
+	}
+	//把视频列表转换为resp的视频列表
+	var respVideos []resp.Video
+	for _, video := range videos {
+		authorInfo, _ := service.GetUserInfo(video.AuthorID)
+		//构建视频响应列表
+		//todo 优化
+		respVideos = append(respVideos, video.ToResponse(service.IsFavorite(uid.(uint), video.ID), authorInfo.ToResponse(service.IsFollowing(uid.(uint), video.AuthorID))))
+	}
+	lastIndex := len(videos) - 1
+	lastElement := videos[lastIndex]
+	nextTime := lastElement.CreatedAt
+	c.JSON(http.StatusOK, resp.Feed{
+		StatusCode: 0,
+		StatusMsg:  "successful",
+		VideoList:  respVideos,
+		NextTime:   nextTime.Unix(),
+	})
+}
+
+// 响应错误
+func feedRespErr(c *gin.Context, err string) {
+	c.JSON(http.StatusOK, resp.Feed{
+		StatusCode: 1,
+		StatusMsg:  err,
+		VideoList:  nil,
+		NextTime:   0,
+	})
 }

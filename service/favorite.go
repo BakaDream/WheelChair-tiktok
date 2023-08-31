@@ -6,7 +6,7 @@ import (
 )
 
 func Favorite(videoID uint, userID uint) error {
-	// todo:原子操作
+	// todo: 原子操作
 	favorite := m.Favorite{
 		UserID:  userID,
 		VideoID: videoID,
@@ -56,7 +56,7 @@ func Favorite(videoID uint, userID uint) error {
 }
 
 func UnFavorite(videoID uint, userID uint) error {
-	// todo:原子操作
+	// todo: 原子操作
 	var favorite m.Favorite
 	err := m.DB.Where("user_id = ? AND video_id = ?", userID, videoID).First(&favorite).Error
 	if err != nil {
@@ -105,4 +105,22 @@ func IsFavorite(userID uint, videoID uint) bool {
 		}
 	}
 	return true
+}
+
+func GetFavoriteVideoList(userID uint) ([]m.Video, error) {
+	//todo: 原子操作
+	var videos []m.Video
+	var favoriteVideoIDs []uint
+
+	// 查询Favorite表中匹配的VideoID
+	if err := m.DB.Model(&m.Favorite{}).Where("user_id = ?", userID).Pluck("video_id", &favoriteVideoIDs).Error; err != nil {
+		return nil, err
+	}
+
+	// 查询Video表中匹配的视频信息
+	if err := m.DB.Where("id IN ?", favoriteVideoIDs).Find(&videos).Error; err != nil {
+		return nil, err
+	}
+	return videos, nil
+
 }

@@ -2,7 +2,6 @@ package controller
 
 import (
 	l "WheelChair-tiktok/logger"
-	m "WheelChair-tiktok/model"
 	resp "WheelChair-tiktok/model/response"
 	"WheelChair-tiktok/service"
 	"github.com/gin-gonic/gin"
@@ -70,34 +69,52 @@ func FavoriteAction(c *gin.Context) {
 }
 
 func FavoriteList(c *gin.Context) {
-	UserID, err := strconv.Atoi(c.Query("user_id"))
+	username, _ := c.Get("username")
+	userIDs := c.Query("user_id")
+	userID, err := strconv.Atoi(userIDs)
 	if err != nil {
-		l.Logger.Infof("The type of UserID is incorrect")
+		l.Logger.Errorf("User '%s' get favorite list failed,because %s. Client IP:%s", username, err.Error(), c.ClientIP())
+		favoriteListRespErr(c, err.Error())
 		return
 	}
-	var storeFavorite []m.Favorite
-	result := m.DB.Where("user_id = ?", UserID).Order("CreateAt DESC").Find(&storeFavorite)
-	if result != nil {
-		l.Logger.Error("Make UserVideoLikeList Error:%v", err)
+	//获取user的点赞的视频的列表
+	videos, err := service.GetFavoriteVideoList(uint(userID))
+	if err != nil {
+		l.Logger.Errorf("User '%s' get favorite list failed,because %s. Client IP:%s", username, err.Error(), c.ClientIP())
+		favoriteListRespErr(c, err.Error())
 		return
 	}
-	var storeVideoID []uint
-	for _, Video := range storeFavorite {
-		storeVideoID = append(storeVideoID, Video.VideoID)
+	//把videos转换为resp.videos
+	var respVideos []resp.Video
+	for _, video := range videos {
+		authorInfo, _ := service.GetUserInfo(video.AuthorID)
+		//构建视频响应列表
+		//todo 优化
+		respVideos = append(respVideos, video.ToResponse(true, authorInfo.ToResponse(true)))
 	}
-	var storeVideoList []m.Video
-	result = m.DB.Where("ID IN (?)", storeVideoID).Find(&storeVideoList)
-	if result != nil {
-		l.Logger.Error("Make VideoList Error:%v", err)
-		return
-	}
-	c.JSON(http.StatusOK, resp.FavoriteList{StatusCode: 0, StatusMsg: "Get FavoriteList successfully"})
+	l.Logger.Infof("User '%s' get favorite list success. Client IP:%s", username, c.ClientIP())
+	c.JSON(http.StatusOK, resp.FavoriteList{
+		StatusCode: 0,
+		StatusMsg:  "success",
+		VideoList:  respVideos,
+	})
+	return
+
 }
 
 func favoriteActionRespErr(c *gin.Context, err string) {
 	c.JSON(http.StatusOK, resp.FavoriteAction{
 		StatusCode: 1,
 		StatusMsg:  err,
+	})
+	return
+}
+
+func favoriteListRespErr(c *gin.Context, err string) {
+	c.JSON(http.StatusOK, resp.FavoriteList{
+		StatusCode: 1,
+		StatusMsg:  err,
+		VideoList:  nil,
 	})
 	return
 }
