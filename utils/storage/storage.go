@@ -14,7 +14,7 @@ type Store interface {
 	GetSnapshot(videoFile *multipart.FileHeader) (string, error)
 }
 
-func Init() Store {
+func Init() {
 	switch os.Getenv("STORAGE_TYPE") {
 	case "TencentCOS":
 		Storage = &TencentCos{
@@ -29,5 +29,5 @@ func Init() Store {
 	default:
 		logger.Logger.Fatal("Storage type has some err")
 	}
-	return nil
+	return
 }
