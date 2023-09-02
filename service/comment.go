@@ -65,3 +65,13 @@ func DeleteComment(commentID uint) error {
 
 	return nil
 }
+
+func GetCommentList(videoID uint) ([]m.Comment, error) {
+	var comments []m.Comment
+	if err := m.DB.Where("video_id = ?", videoID).Find(&comments).Error; err != nil {
+		return comments, err
+	}
+	//没错误，返回
+	return comments, nil
+
+}

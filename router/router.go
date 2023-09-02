@@ -41,7 +41,7 @@ func InitRouter() *gin.Engine {
 		commentGroup := douyinGroup.Group("/comment")
 		{
 			commentGroup.POST("/action/", middleware.Auth(), controller.CommentAction)
-			//		commentGroup.GET("/list/", middleware.Auth(), controller.CommentList)
+			commentGroup.GET("/list/", middleware.Auth(), controller.CommentList)
 		}
 		//
 	}

@@ -20,7 +20,7 @@ func CommentAction(c *gin.Context) {
 
 	// 检查必选参数是否存在
 	if videoIDStr == "" || actionType == "" {
-		l.Logger.Infof("user '%s' operate comment failed, because params is nil.Client IP:%s", userName.(string), c.ClientIP())
+		l.Logger.Infof("user '%s' operate comment failed, because params is null.Client IP:%s", userName.(string), c.ClientIP())
 		commentActionErr(c, "operate")
 		return
 	}
@@ -28,12 +28,12 @@ func CommentAction(c *gin.Context) {
 	// 转换字符串参数为uint类型
 	videoID, err := strconv.ParseUint(videoIDStr, 10, 64)
 	if err != nil {
-		l.Logger.Infof("user '%s' publisg comment failed, because videoID is invalid.Client IP:%s", userName.(string), c.ClientIP())
+		l.Logger.Infof("user '%s' publish comment failed, because videoID is invalid.Client IP:%s", userName.(string), c.ClientIP())
 		commentActionErr(c, "publish")
 		return
 	}
 
-	// 处理点赞/取消点赞逻辑
+	// 处理评论/删除评论逻辑
 
 	//点赞
 	if actionType == "1" {
@@ -99,14 +99,59 @@ func CommentAction(c *gin.Context) {
 	}
 }
 
-// func CommentList(c *gin.Context) {
-//
-// }
+func CommentList(c *gin.Context) {
+	//获取参数
+	videoIDStr := c.Query("video_id")
+	userName, _ := c.Get("username")
+	userID, _ := c.Get("uid")
+	//检查videoID是否为空
+	if videoIDStr == "" {
+		l.Logger.Infof("user '%s' get comment list failed, because params is null.Client IP:%s", userName.(string), c.ClientIP())
+		commentListErr(c, "video id is null")
+		return
+	}
+
+	// 转换字符串参数为uint类型
+	videoID, err := strconv.ParseUint(videoIDStr, 10, 64)
+	if err != nil {
+		l.Logger.Infof("user '%s' get comment list failed, because videoID is invalid.Client IP:%s", userName.(string), c.ClientIP())
+		commentListErr(c, "videoID is invalid")
+		return
+	}
+	commentList, err := service.GetCommentList(uint(videoID))
+	if err != nil {
+		l.Logger.Errorf("user '%s' get comment list failed, because %s.Client IP:%s", userName.(string), err.Error(), c.ClientIP())
+		commentListErr(c, "get comment list failed,please retry it")
+		return
+	}
+	commentRespList := make([]resp.Comment, len(commentList))
+	for i, comment := range commentList {
+		//todo : err判断
+		userInfo, _ := service.GetUserInfo(comment.UserID)
+		commentRespList[i] = comment.ToResponse(userInfo.ToResponse(service.IsFollowing(userID.(uint), comment.UserID)))
+	}
+	l.Logger.Infof("user '%s' get comment list success.Client IP:%s", userName.(string), c.ClientIP())
+	c.JSON(http.StatusOK, resp.CommentList{
+		StatusCode:  0,
+		StatusMsg:   "success",
+		CommentList: commentRespList,
+	})
+	return
+
+}
 func commentActionErr(c *gin.Context, action string) {
 	c.JSON(http.StatusOK, resp.CommentAction{
 		StatusCode: 1,
 		StatusMsg:  action + "comment err,please retry it",
 		Comment:    resp.Comment{},
+	})
+	return
+}
+func commentListErr(c *gin.Context, err string) {
+	c.JSON(http.StatusOK, resp.CommentList{
+		StatusCode:  1,
+		StatusMsg:   err,
+		CommentList: nil,
 	})
 	return
 }
