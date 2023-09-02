@@ -13,7 +13,7 @@ func main() {
 	config.LoadEnv()
 	logger.Init()
 	storage.Init()
-	model.DatabaseConn()
+	model.Init()
 	cache.RedisInit()
 	r := router.InitRouter()
 	r.Run("0.0.0.0:80")
