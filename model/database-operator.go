@@ -1,0 +1,93 @@
+package model
+
+import (
+	l "WheelChair-tiktok/logger"
+	"database/sql"
+	"errors"
+	"fmt"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"os"
+	"strconv"
+	"time"
+)
+
+var DB *gorm.DB
+
+func Init() {
+	//生成dsn
+	dsn, err := generateDSN()
+	if err != nil {
+		l.Logger.Fatal(err.Error())
+		return
+	}
+	// 创建数据库如果 没有创建
+	err = createDataBase()
+	if err != nil {
+		l.Logger.Fatal(err.Error())
+		return
+	}
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		l.Logger.Fatal(err.Error())
+		return
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		l.Logger.Fatal("Failed to get sqlDB")
+		return
+	}
+	// 设置最大空闲连接数
+	MaxIdleCount, _ := strconv.Atoi(os.Getenv("MAX_IDLE_COUNT"))
+	MaxOpenCount, _ := strconv.Atoi(os.Getenv("MAX_OPEN"))
+	MaxLifeTime, _ := strconv.Atoi(os.Getenv("MAX_LIFE_TIME"))
+	MaxIdleTime, _ := strconv.Atoi(os.Getenv("MAX_IDLE_TIME"))
+	sqlDB.SetMaxIdleConns(MaxIdleCount)
+	// 设置最大打开连接数
+	sqlDB.SetMaxOpenConns(MaxOpenCount)
+	// 设置连接的最大存活时间
+	sqlDB.SetConnMaxLifetime(time.Duration(MaxLifeTime))
+	sqlDB.SetConnMaxIdleTime(time.Duration(MaxIdleTime))
+
+	l.Logger.Info("MySQL database connect successfully")
+	DB = db
+}
+
+// 生成dsn
+func generateDSN() (string, error) {
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	mysqlPort := os.Getenv("MYSQL_PORT")
+	dbUser := os.Getenv("MYSQL_USER")
+	userPassword := os.Getenv("MYSQL_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	// 检查必要的环境变量是否已设置
+	if mysqlHost == "" || mysqlPort == "" || dbName == "" || dbUser == "" || userPassword == "" {
+		return "", errors.New("mysql params is invalid")
+	}
+
+	// 拼接 DSN
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4", dbUser, userPassword, mysqlHost, mysqlPort, dbName)
+	return dsn, nil
+}
+
+func createDataBase() error {
+	mysqlHost := os.Getenv("MYSQL_HOST")
+	mysqlPort := os.Getenv("MYSQL_PORT")
+	dbUser := os.Getenv("MYSQL_USER")
+	userPassword := os.Getenv("MYSQL_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", dbUser, userPassword, mysqlHost, mysqlPort)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	// 创建数据库并设置字符集为 UTF-8 MB4
+	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + dbName + " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+	if err != nil {
+		return err
+	}
+	return nil
+}
