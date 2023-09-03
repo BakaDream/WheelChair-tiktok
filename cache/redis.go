@@ -21,7 +21,7 @@ func RedisInit() {
 	addr := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	rc := redis.NewClient(&redis.Options{
 		Addr:     addr,
-		Password: os.Getenv("REDIS_AUTH"),
+		Password: os.Getenv("REDISCLI_AUTH"),
 		DB:       0,
 	})
 	_, err := rc.Ping(context.Background()).Result()

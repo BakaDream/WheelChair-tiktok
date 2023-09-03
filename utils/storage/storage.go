@@ -24,7 +24,7 @@ func Init() {
 		}
 	case "Local":
 		Storage = &Local{
-			Static: os.Getenv("LOCAL_STATIC_URL"),
+			Static: os.Getenv("STATIC_URL"),
 		}
 	default:
 		logger.Logger.Fatal("Storage type has some err")

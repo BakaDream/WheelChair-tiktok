@@ -20,5 +20,6 @@ func GetVideoList(lateTime time.Time) ([]m.Video, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return videos, nil
 }
