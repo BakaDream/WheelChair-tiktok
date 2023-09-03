@@ -18,10 +18,10 @@ var RDB = RedisClient{}
 var nDuration = 30 * 24 * 60 * 60 * time.Second
 
 func RedisInit() {
-
+	addr := os.Getenv("REDIS_HOST") + ":" + os.Getenv("REDIS_PORT")
 	rc := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("REDIS_ADDR"),
-		Password: os.Getenv("REDIS_PASSWORD"),
+		Addr:     addr,
+		Password: os.Getenv("REDIS_AUTH"),
 		DB:       0,
 	})
 	_, err := rc.Ping(context.Background()).Result()

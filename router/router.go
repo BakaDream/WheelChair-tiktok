@@ -4,11 +4,12 @@ import (
 	"WheelChair-tiktok/controller"
 	"WheelChair-tiktok/middleware"
 	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
 func InitRouter() *gin.Engine {
 	r := gin.Default()
-	r.Static("/public", "./public")
+	r.StaticFS("/public", http.Dir("./public"))
 	// 主路由组
 	douyinGroup := r.Group("/douyin")
 	{

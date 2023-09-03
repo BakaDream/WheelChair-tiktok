@@ -33,6 +33,11 @@ func Init() {
 		l.Logger.Fatal(err.Error())
 		return
 	}
+
+	err = db.AutoMigrate(&User{}, &Video{}, &Favorite{}, &Follow{}, &Comment{})
+	if err != nil {
+		l.Logger.Fatal(err)
+	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		l.Logger.Fatal("Failed to get sqlDB")
@@ -68,7 +73,7 @@ func generateDSN() (string, error) {
 	}
 
 	// 拼接 DSN
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4", dbUser, userPassword, mysqlHost, mysqlPort, dbName)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true", dbUser, userPassword, mysqlHost, mysqlPort, dbName)
 	return dsn, nil
 }
 
@@ -79,15 +84,15 @@ func createDataBase() error {
 	userPassword := os.Getenv("MYSQL_PASSWORD")
 	dbName := os.Getenv("DB_NAME")
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", dbUser, userPassword, mysqlHost, mysqlPort)
-	db, err := sql.Open("mysql", dsn)
+	dbc, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 	// 创建数据库并设置字符集为 UTF-8 MB4
-	_, err = db.Exec("CREATE DATABASE IF NOT EXISTS " + dbName + " CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci")
+	_, err = dbc.Exec("CREATE DATABASE IF NOT EXISTS " + dbName + " CHARACTER SET utf8mb4")
 	if err != nil {
 		return err
 	}
+	dbc.Close()
 	return nil
 }
