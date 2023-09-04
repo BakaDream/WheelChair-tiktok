@@ -26,6 +26,19 @@ func Init() {
 		Storage = &Local{
 			Static: os.Getenv("STATIC_URL"),
 		}
+	//case "MinIO":
+	//	var useSSL = false
+	//	if os.Getenv("MINIO_USESSL") == "true" {
+	//		useSSL = true
+	//	}
+	//	Storage = &MinIO{
+	//		Endpoint:        os.Getenv("MINIO_ENDPOINT"),
+	//		AccessKeyID:     os.Getenv("MINIO_ACCESSKEYID"),
+	//		SecretAccessKey: os.Getenv("MINIO_SECRECTACCESSKEY"),
+	//		UseSSL:          useSSL,
+	//		BucketName:      os.Getenv("MINIO_BUCKETNAME"),
+	//	}
+
 	default:
 		logger.Logger.Fatal("Storage type has some err")
 	}

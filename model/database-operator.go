@@ -38,6 +38,10 @@ func Init() {
 	if err != nil {
 		l.Logger.Fatal(err)
 	}
+	err = addDefaultUser(db)
+	if err != nil {
+		l.Logger.Fatal(err)
+	}
 	sqlDB, err := db.DB()
 	if err != nil {
 		l.Logger.Fatal("Failed to get sqlDB")
@@ -95,4 +99,28 @@ func createDataBase() error {
 	}
 	dbc.Close()
 	return nil
+}
+func addDefaultUser(db *gorm.DB) error {
+	u := &User{
+		Model:           gorm.Model{ID: 1},
+		UserName:        "default",
+		IP:              "",
+		Password:        "asdbkasbdlasbd",
+		FollowCount:     0,
+		FollowerCount:   0,
+		Signature:       "",
+		Avatar:          "",
+		BackgroundImage: "",
+		TotalFavorited:  0,
+		WorkCount:       0,
+		FavoriteCount:   0,
+	}
+	// 判断用户是否注册
+	if !errors.Is(db.Where("ID = ?", u.ID).First(&u).Error, gorm.ErrRecordNotFound) {
+		return nil
+	}
+
+	// 否则注册
+	err := db.Create(&u).Error
+	return err
 }

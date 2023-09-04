@@ -25,6 +25,11 @@ func AddUser(u m.User) (userInter m.User, err error) {
 
 // Login 注册
 func Login(u m.User) (userInter m.User, err error) {
+	//判断用户是否为i
+	err = m.DB.Where("ID = ?", uint(1)).First(&userInter).Error
+	if err == nil {
+		return userInter, errors.New("reserve user")
+	}
 	// 检测用户是否在数据库中
 	err = m.DB.Where("user_name = ?", u.UserName).First(&userInter).Error
 
