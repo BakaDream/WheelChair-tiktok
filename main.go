@@ -7,6 +7,7 @@ import (
 	"WheelChair-tiktok/model"
 	"WheelChair-tiktok/router"
 	"WheelChair-tiktok/utils/storage"
+	"os"
 )
 
 func main() {
@@ -16,6 +17,7 @@ func main() {
 	model.Init()
 	cache.RedisInit()
 	r := router.InitRouter()
-	r.Run("0.0.0.0:80")
+	port := os.Getenv("PORT")
+	r.Run("0.0.0.0:" + port)
 
 }

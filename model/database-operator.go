@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"os"
 	"strconv"
 	"time"
@@ -28,13 +29,17 @@ func Init() {
 		return
 	}
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Silent)})
 	if err != nil {
 		l.Logger.Fatal(err.Error())
 		return
 	}
 
 	err = db.AutoMigrate(&User{}, &Video{}, &Favorite{}, &Follow{}, &Comment{})
+	if err != nil {
+		l.Logger.Fatal(err)
+	}
+	err = addDefaultUser(db)
 	if err != nil {
 		l.Logger.Fatal(err)
 	}
@@ -95,4 +100,28 @@ func createDataBase() error {
 	}
 	dbc.Close()
 	return nil
+}
+func addDefaultUser(db *gorm.DB) error {
+	u := &User{
+		Model:           gorm.Model{ID: 1},
+		UserName:        "default",
+		IP:              "",
+		Password:        "asdbkasbdlasbd",
+		FollowCount:     0,
+		FollowerCount:   0,
+		Signature:       "",
+		Avatar:          "",
+		BackgroundImage: "",
+		TotalFavorited:  0,
+		WorkCount:       0,
+		FavoriteCount:   0,
+	}
+	// 判断用户是否注册
+	if !errors.Is(db.Where("ID = ?", u.ID).First(&u).Error, gorm.ErrRecordNotFound) {
+		return nil
+	}
+
+	// 否则注册
+	err := db.Create(&u).Error
+	return err
 }
